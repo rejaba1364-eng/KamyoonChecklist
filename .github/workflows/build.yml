@@ -1,7 +1,4 @@
 
-
-
-
 name: Build Android APK
 
 on:
@@ -10,34 +7,35 @@ on:
     branches:
       - main
 
-permissions:
-  contents: read
-
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Find Gradle Wrapper
+      - name: Extract Android project
         run: |
-          echo "Searching for gradlew"
-          find . -type f -name gradlew
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: Project ZIP not found"
+            exit 1
+          fi
+          mkdir -p extracted
+          unzip -q "$ZIP_FILE" -d extracted
 
       - name: Build APK
         run: |
-          GRADLEW=$(find . -type f -name gradlew | head -n 1)
+          GRADLEW=$(find extracted -type f -name gradlew | head -n 1)
           if [ -z "$GRADLEW" ]; then
-            echo "ERROR: gradlew not found"
+            echo "ERROR: gradlew not found in ZIP"
             exit 1
           fi
           chmod +x "$GRADLEW"
@@ -48,5 +46,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KamyoonChecklist-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          path: extracted/**/build/outputs/apk/debug/*.apk
