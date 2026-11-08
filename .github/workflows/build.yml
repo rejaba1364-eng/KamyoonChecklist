@@ -26,11 +26,21 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Extract project ZIP
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Project ZIP not found"
+            exit 1
+          fi
+          mkdir extracted
+          unzip -q "$ZIP_FILE" -d extracted
+
       - name: Build Android APK
-        run: gradle assembleDebug
+        run: gradle -p extracted assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: KamyoonChecklist-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: extracted/app/build/outputs/apk/debug/*.apk
