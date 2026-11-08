@@ -4,43 +4,59 @@ name: Build Android APK
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Extract project ZIP
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extract project
         run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
+          mkdir -p extracted
+          ZIP=$(find . -maxdepth 1 -type f -iname '*Android*Project*.zip' | head -n 1)
+          if [ -z "$ZIP" ]; then
             echo "Project ZIP not found"
             exit 1
           fi
-          mkdir extracted
-          unzip -q "$ZIP_FILE" -d extracted
+          unzip -oq "$ZIP" -d extracted
 
-      - name: Build Android APK
-        run: gradle -p extracted assembleDebug
+      - name: Find project root
+        run: |
+          PROJECT=$(find extracted -name settings.gradle.kts -type f | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "settings.gradle.kts not found"
+            find extracted -maxdepth 4 -type f
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$PROJECT")" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: KamyoonChecklist-debug-apk
-          path: extracted/app/build/outputs/apk/debug/*.apk
+          path: extracted/**/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
