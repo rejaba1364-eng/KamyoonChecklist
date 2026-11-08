@@ -28,11 +28,21 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Make Gradle executable
-        run: chmod +x gradlew
+     - name: Find Gradle Wrapper
+  run: |
+    echo "Searching for gradlew..."
+    find . -type f -name gradlew
 
-      - name: Build Android APK
-        run: ./gradlew assembleDebug
+- name: Build Android APK
+  run: |
+    GRADLEW=$(find . -type f -name gradlew | head -n 1)
+    if [ -z "$GRADLEW" ]; then
+      echo "ERROR: gradlew not found"
+      exit 1
+    fi
+    chmod +x "$GRADLEW"
+    cd "$(dirname "$GRADLEW")"
+    ./gradlew assembleDebug 
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
