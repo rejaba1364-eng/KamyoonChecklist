@@ -21,29 +21,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract Android project
-        run: |
-          ZIP_FILE=$(find . -maxdepth 1 -type f -iname '*.zip' | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "ERROR: Project ZIP not found"
-            exit 1
-          fi
-          mkdir -p extracted
-          unzip -q "$ZIP_FILE" -d extracted
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
-      - name: Build APK
-        run: |
-          GRADLEW=$(find extracted -type f -name gradlew | head -n 1)
-          if [ -z "$GRADLEW" ]; then
-            echo "ERROR: gradlew not found in ZIP"
-            exit 1
-          fi
-          chmod +x "$GRADLEW"
-          cd "$(dirname "$GRADLEW")"
-          ./gradlew assembleDebug
+      - name: Build Android APK
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: KamyoonChecklist-debug-apk
-          path: extracted/**/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/*.apk
